@@ -48,7 +48,6 @@ def generate_output_codes(num_classes, code_type) :
                            output code
     """
 
-    ### ========== TODO : START ========== ###
     # part a: generate output codes
     # hint : initialize with np.ones(...) and np.zeros(...)
     R = None
@@ -67,8 +66,6 @@ def generate_output_codes(num_classes, code_type) :
                 R[i][k+j] = 1
                 R[i+j+1][k+j] = -1
             k += num_classes - (i+1)
-
-    ### ========== TODO : END ========== ###
 
     return R
 
@@ -181,6 +178,12 @@ def logistic_losses(R, discrim_func, alpha=2) :
     Wrapper around compute_losses for logistic loss function.
     """
     return compute_losses('logistic', R, discrim_func, alpha)
+
+def calculate_errors(y_test, y_pred) :
+    error = 0
+    for i in range(len(y_test)):
+        error += y_test[i] != y_pred[i]
+    return error
 
 
 ######################################################################
@@ -312,7 +315,7 @@ class MulticlassSVM :
             for j in range(num_classifiers):
                 # calculate scores using distances to hyperplanes
                 scores[j] = self.svms[j].decision_function(X[i].reshape(1,d))
-            losses = compute_losses("hamming", self.R, scores)
+            losses = compute_losses(loss_func, self.R, scores)
             # choose index of first minimum score
             y[i] = self.classes[np.argmin(losses)]
 
@@ -342,17 +345,50 @@ def main() :
     R = generate_output_codes(num_classes, "ova")
     multi_svm = MulticlassSVM(R, C=10.0, kernel='poly', degree = 4, coef0 = 1, gamma = 1)
     multi_svm.fit(X_train, y_train)
-    y_pred = multi_svm.predict(X_test)
+    y_pred_ham = multi_svm.predict(X_test, loss_func="hamming")
+    y_pred_sig = multi_svm.predict(X_test, loss_func="sigmoid")
+    y_pred_log = multi_svm.predict(X_test, loss_func="sigmoid")
 
-    # test error and support vectors
-    error = 0
-    for i in range(len(y_test)):
-        error += y_test[i] != y_pred[i]
-    print error
+    print calculate_errors(y_test, y_pred_ham)
+    print calculate_errors(y_test, y_pred_sig)
+    print calculate_errors(y_test, y_pred_log)
+
+    R = generate_output_codes(num_classes, "ovo")
+    multi_svm = MulticlassSVM(R, C=10.0, kernel='poly', degree = 4, coef0 = 1, gamma = 1)
+    multi_svm.fit(X_train, y_train)
+    y_pred_ham = multi_svm.predict(X_test, loss_func="hamming")
+    y_pred_sig = multi_svm.predict(X_test, loss_func="sigmoid")
+    y_pred_log = multi_svm.predict(X_test, loss_func="sigmoid")
+
+    print calculate_errors(y_test, y_pred_ham)
+    print calculate_errors(y_test, y_pred_sig)
+    print calculate_errors(y_test, y_pred_log)
+
+    R = load_code("R1.csv")
+    multi_svm = MulticlassSVM(R, C=10.0, kernel='poly', degree = 4, coef0 = 1, gamma = 1)
+    multi_svm.fit(X_train, y_train)
+    y_pred_ham = multi_svm.predict(X_test, loss_func="hamming")
+    y_pred_sig = multi_svm.predict(X_test, loss_func="sigmoid")
+    y_pred_log = multi_svm.predict(X_test, loss_func="sigmoid")
+
+    print calculate_errors(y_test, y_pred_ham)
+    print calculate_errors(y_test, y_pred_sig)
+    print calculate_errors(y_test, y_pred_log)
+
+    R = load_code("R2.csv")
+    multi_svm = MulticlassSVM(R, C=10.0, kernel='poly', degree = 4, coef0 = 1, gamma = 1)
+    multi_svm.fit(X_train, y_train)
+    y_pred_ham = multi_svm.predict(X_test, loss_func="hamming")
+    y_pred_sig = multi_svm.predict(X_test, loss_func="sigmoid")
+    y_pred_log = multi_svm.predict(X_test, loss_func="sigmoid")
+
+    print calculate_errors(y_test, y_pred_ham)
+    print calculate_errors(y_test, y_pred_sig)
+    print calculate_errors(y_test, y_pred_log)
+
+    # test support vectors
     print multi_svm.svms[0].support_
     print multi_svm.svms[2].support_
-
-    ### ========== TODO : END ========== ###
 
 if __name__ == "__main__" :
     main()
