@@ -329,7 +329,6 @@ def main() :
 
     # part b : generate output codes
     test_output_codes()
-    print generate_output_codes(5, 'ovo')
 
     ### ========== TODO : START ========== ###
     # parts c-e : train component classifiers, make predictions,
