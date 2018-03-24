@@ -59,7 +59,7 @@ def generate_output_codes(num_classes, code_type) :
                 if i != j:
                     R[i][j] = -1
     if code_type == "ovo":
-        num_classifiers = math.factorial(num_classes) / (math.factorial(2) * math.factorial(num_classes - 2))
+        num_classifiers = num_classes*(num_classes-1)/2
         R = np.zeros((num_classes, num_classifiers))
         k = 0
         for i in range(num_classes):
@@ -189,7 +189,7 @@ def logistic_losses(R, discrim_func, alpha=2) :
 
 class MulticlassSVM :
 
-    def __init__(self, R, C=1.0, kernel='linear', **kwargs) :
+    def __init__(self, R, C=10.0, kernel='poly', **kwargs) :
         """
         Multiclass SVM.
 
@@ -253,25 +253,34 @@ class MulticlassSVM :
             raise Exception('num_classes mismatched between R and data')
         self.classes = classes    # keep track for prediction
 
-        ### ========== TODO : START ========== ###
-        # part c: train binary classifiers
+        n,d = X.shape
+        for c in range(num_classifiers):
+            # set up positive and negative arrays
+            pos_ndx = []
+            neg_ndx = []
 
-        # HERE IS ONE WAY (THERE MAY BE OTHER APPROACHES)
-        #
-        # keep two lists, pos_ndx and neg_ndx, that store indices
-        #   of examples to classify as pos / neg for current binary task
-        #
-        # for each class C
-        # a) find indices for which examples have class equal to C
-        #    [use np.nonzero(CONDITION)[0]]
-        # b) update pos_ndx and neg_ndx based on output code R[i,j]
-        #    where i = class index, j = classifier index
-        #
-        # set X_train using X with pos_ndx and neg_ndx
-        # set y_train using y with pos_ndx and neg_ndx
-        #     y_train should contain only {+1,-1}
-        #
-        # train the binary classifier
+            for i in range(n):
+                # update positive and negative index arrays
+                curr_class = np.where(classes == y[i])[0][0]
+                if self.R[curr_class][c] == -1: neg_ndx.append(i)
+                if self.R[curr_class][c] == 1: pos_ndx.append(i)
+            X_train = np.zeros((len(pos_ndx)+len(neg_ndx), d))
+            y_train = np.zeros(len(pos_ndx)+len(neg_ndx))
+
+            # fill X_train and y_train using arrays
+            for i in range(len(pos_ndx)):
+                X_train[i] = X[pos_ndx[i]]
+                y_train[i] = 1
+            for i in range(len(neg_ndx)):
+                X_train[i+len(pos_ndx)] = X[neg_ndx[i]]
+                y_train[i+len(pos_ndx)] = -1
+
+            # train the binary classifier
+            svm = self.svms[c]
+            svm.fit(X_train, y_train)
+            self.svms[c] = svm
+
+
 
         pass
         ### ========== TODO : END ========== ###
@@ -298,20 +307,14 @@ class MulticlassSVM :
         # setup predictions
         y = np.zeros(n)
 
-        ### ========== TODO : START ========== ###
-        # part d: predict multiclass class
-        #
-        # HERE IS ONE WAY (THERE MAY BE OTHER APPROACHES)
-        #
-        # for each example
-        #   predict distances to hyperplanes using SVC.decision_function(...)
-        #   find class with minimum loss (be sure to look up in self.classes)
-        #
-        # if you have a choice between multiple occurrences of the minimum values,
-        # use the index corresponding to the first occurrence
-
-        pass
-        ### ========== TODO : END ========== ###
+        for i in range(n):
+            scores = np.zeros(num_classifiers)
+            for j in range(num_classifiers):
+                # calculate scores using distances to hyperplanes
+                scores[j] = self.svms[j].decision_function(X[i].reshape(1,d))
+            losses = compute_losses("hamming", self.R, scores)
+            # choose index of first minimum score
+            y[i] = self.classes[np.argmin(losses)]
 
         return y
 
@@ -326,29 +329,28 @@ def main() :
     train_data = load_data("soybean_train.csv", converters)
     test_data = load_data("soybean_test.csv", converters)
     num_classes = 15
+    X_train = train_data.X
+    y_train = train_data.y
+    X_test = test_data.X
+    y_test = test_data.y
 
     # part b : generate output codes
     test_output_codes()
 
-    ### ========== TODO : START ========== ###
     # parts c-e : train component classifiers, make predictions,
     #             compare output codes and loss functions
-    #
-    # use generate_output_codes(...) to generate OVA and OVO codes
-    # use load_code(...) to load random codes
-    #
-    # for each output code and loss function
-    #   train a multiclass SVM on training data and evaluate on test data
-    #   setup the binary classifiers using the specified parameters from the handout
-    #
-    # if you implemented MulticlassSVM.fit(...) correctly,
-    #   using OVA, your first trained binary classifier
-    #   should have the following indices for support vectors
-    #     array([ 12,  22,  29,  37,  41,  44,  49,  55,  76, 134,
-    #            157, 161, 167, 168,   0,   3,   7])
-    #
-    # if you implemented MulticlassSVM.predict(...) correctly,
-    #   using OVA and Hamming loss, you should find 54 errors
+    R = generate_output_codes(num_classes, "ova")
+    multi_svm = MulticlassSVM(R, C=10.0, kernel='poly', degree = 4, coef0 = 1, gamma = 1)
+    multi_svm.fit(X_train, y_train)
+    y_pred = multi_svm.predict(X_test)
+
+    # test error and support vectors
+    error = 0
+    for i in range(len(y_test)):
+        error += y_test[i] != y_pred[i]
+    print error
+    print multi_svm.svms[0].support_
+    print multi_svm.svms[2].support_
 
     ### ========== TODO : END ========== ###
 
