@@ -21,6 +21,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import BaggingClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
+import sklearn.ensemble
 
 
 ######################################################################
@@ -160,8 +161,8 @@ def main():
     # vary number of features
     
     # calculate accuracy of bagging ensemble and random forest
-    #   for 100 random training and test set splits
-    # make sure to use same splits to enable proper comparison
+       #for 100 random training and test set splits
+     # make sure to use same splits to enable proper comparison
     max_features_vector = range(1,65,2)
     bagging_scores = []
     random_forest_scores = collections.defaultdict(list)
@@ -178,7 +179,7 @@ def main():
     random_forest_results = []        
     for m in max_features_vector :
         bagging_results.append(np.median(np.array(bagging_scores)))
-#        print m, np.median(np.array(random_forest_scores[m]))
+        print m, np.median(np.array(random_forest_scores[m]))
         random_forest_results.append(np.median(np.array(random_forest_scores[m])))
     plot_scores(max_features_vector, bagging_results, random_forest_results)
     
@@ -195,7 +196,13 @@ def main():
     
     ### ========== TODO : START ========== ###
     # part d: determine pixel importance
-    
+    clf = sklearn.ensemble.RandomForestClassifier(10)
+    clf.fit(X, y)
+    a = clf.feature_importances_
+    x = np.split(a, 8)
+    plt.imshow(x, cmap='hot', interpolation='nearest')
+    plt.colorbar()
+    plt.show()
     ### ========== TODO : END ========== ###
 
 
